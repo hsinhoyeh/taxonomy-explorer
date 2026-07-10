@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Geist, Geist_Mono } from "next/font/google";
 import NameBar from "@/components/NameBar";
+import LangToggle from "@/components/LangToggle";
+import PageTransition from "@/components/PageTransition";
+import { LangProvider } from "@/lib/i18n";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,27 +33,32 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
-        <header className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-4 flex items-center justify-between flex-wrap gap-3">
-          <Link href="/" className="font-extrabold text-xl">
-            🧭 Taxonomy Explorer
-          </Link>
-          <NameBar />
-        </header>
-        {children}
-        <footer className="text-center text-xs text-slate-400 py-6 px-6">
-          Built on the{" "}
-          <a
-            href="https://github.com/withmarbleapp/os-taxonomy"
-            className="underline"
-          >
-            Marble Skill Taxonomy (v1)
-          </a>{" "}
-          © Generative Spark, Inc. (Marble) ·{" "}
-          <a href="https://withmarble.com" className="underline">
-            withmarble.com
-          </a>{" "}
-          · licensed under ODbL 1.0 (database) and CC BY-SA 4.0 (content).
-        </footer>
+        <LangProvider>
+          <header className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-6 py-4 flex items-center justify-between flex-wrap gap-3">
+            <Link href="/" className="font-extrabold text-xl">
+              🧭 Taxonomy Explorer
+            </Link>
+            <div className="flex items-center gap-3">
+              <NameBar />
+              <LangToggle />
+            </div>
+          </header>
+          <PageTransition>{children}</PageTransition>
+          <footer className="text-center text-xs text-slate-400 py-6 px-6">
+            Built on the{" "}
+            <a
+              href="https://github.com/withmarbleapp/os-taxonomy"
+              className="underline"
+            >
+              Marble Skill Taxonomy (v1)
+            </a>{" "}
+            © Generative Spark, Inc. (Marble) ·{" "}
+            <a href="https://withmarble.com" className="underline">
+              withmarble.com
+            </a>{" "}
+            · licensed under ODbL 1.0 (database) and CC BY-SA 4.0 (content).
+          </footer>
+        </LangProvider>
       </body>
     </html>
   );

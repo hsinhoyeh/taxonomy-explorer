@@ -24,3 +24,38 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Zhuyin (注音) ruby annotation */
+.zy-ruby {
+  ruby-position: over;
+  margin: 0 1px;
+}
+.zy-rt {
+  font-size: 0.45em;
+  color: #6b7280;
+  letter-spacing: -0.05em;
+  user-select: none;
+}
+
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

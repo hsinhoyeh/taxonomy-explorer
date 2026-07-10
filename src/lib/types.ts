@@ -33,3 +33,10 @@ export interface Cluster {
   ageRangeStart: number;
   summary: string;
 }
+
+export interface TopicTranslation {
+  name: string;
+  description: string;
+  evidence: string[];
+  assessmentPrompt: string;
+}
