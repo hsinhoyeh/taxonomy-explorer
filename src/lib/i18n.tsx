@@ -25,6 +25,7 @@ const STRINGS = {
     childNamePlaceholder: "optional",
     exploreGraph: "Explore graph",
     allDone: "All done! Great job! 🎉",
+    tryAsking: "Try asking",
   },
   "zh-tw": {
     appTitle: "學習地圖探索家",
@@ -44,6 +45,7 @@ const STRINGS = {
     childNamePlaceholder: "可省略",
     exploreGraph: "探索關聯圖",
     allDone: "全部完成！做得好！🎉",
+    tryAsking: "可以這樣問問看",
   },
 } as const;
 

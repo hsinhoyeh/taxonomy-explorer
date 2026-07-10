@@ -52,9 +52,6 @@ export default function EvidenceChecklist({
 
   return (
     <div className="relative rounded-2xl bg-white shadow-sm border border-slate-200 p-5 overflow-hidden">
-      <p className="text-slate-600 italic mb-4">
-        &ldquo;{lang === "zh-tw" && assessmentPromptZh ? <ZhuyinText text={prompt} /> : prompt}&rdquo;
-      </p>
       <p className="text-sm font-semibold text-slate-500 mb-2">
         {doneCount} / {evidence.length} {t("mastered")}
       </p>
@@ -79,6 +76,12 @@ export default function EvidenceChecklist({
           </li>
         ))}
       </ul>
+      <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-5 mb-1">
+        {t("tryAsking")}
+      </p>
+      <p className="text-slate-600 italic">
+        &ldquo;{lang === "zh-tw" && assessmentPromptZh ? <ZhuyinText text={prompt} /> : prompt}&rdquo;
+      </p>
       <AnimatePresence>
         {allDone && (
           <motion.div
