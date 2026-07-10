@@ -6,6 +6,7 @@ import dependenciesZhData from "../../data/dependencies.zh-tw.json";
 import clustersZhData from "../../data/clusters.zh-tw.json";
 import subjectsDomainsZhData from "../../data/subjects-domains.zh-tw.json";
 import type { Topic, Dependency, Cluster, TopicTranslation } from "./types";
+import type { TopicSummary } from "./progress";
 
 const topics = topicsData.topics as Topic[];
 const dependencies = dependenciesData.dependencies as Dependency[];
@@ -46,6 +47,18 @@ export function getTopic(id: string): Topic | undefined {
 
 export function getTopicTranslation(id: string): TopicTranslation | undefined {
   return topicsZh[id];
+}
+
+/** Lightweight per-topic fields for client-side progress computation —
+ * avoids shipping the full topics.json (names/descriptions/evidence text)
+ * into the client bundle just to know subject/age/evidence-count. */
+export function getTopicSummaries(): TopicSummary[] {
+  return topics.map((t) => ({
+    id: t.id,
+    subject: t.subject,
+    ageRangeStart: t.ageRangeStart,
+    evidenceCount: t.evidence.length,
+  }));
 }
 
 export function getSubjects(): string[] {

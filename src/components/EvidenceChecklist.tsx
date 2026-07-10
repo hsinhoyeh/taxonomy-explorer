@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { useChildName, fillPrompt } from "@/lib/useChildName";
+import { useProfiles, evidenceStorageKey, fillPrompt } from "@/lib/profiles";
 import { useLang } from "@/lib/i18n";
 import { ZhuyinText } from "@/components/Bilingual";
 
@@ -19,36 +19,56 @@ export default function EvidenceChecklist({
   assessmentPrompt: string;
   assessmentPromptZh?: string;
 }) {
-  const [name] = useChildName();
+  const { activeProfile, ready } = useProfiles();
   const { lang, t } = useLang();
-  const storageKey = `taxonomy-explorer:evidence:${topicId}`;
+  const storageKey = activeProfile ? evidenceStorageKey(activeProfile.id, topicId) : null;
   const [checked, setChecked] = useState<boolean[]>(() => evidence.map(() => false));
 
   useEffect(() => {
+    if (!storageKey) {
+      setChecked(evidence.map(() => false));
+      return;
+    }
     const stored = window.localStorage.getItem(storageKey);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length === evidence.length) {
           setChecked(parsed);
+          return;
         }
       } catch {
         // ignore malformed cache
       }
     }
+    setChecked(evidence.map(() => false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   const toggle = (i: number) => {
-    const next = checked.map((v, idx) => (idx === i ? !v : v));
-    setChecked(next);
-    window.localStorage.setItem(storageKey, JSON.stringify(next));
+    if (!storageKey) return;
+    setChecked((prev) => {
+      const next = prev.map((v, idx) => (idx === i ? !v : v));
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
+    });
   };
 
   const doneCount = checked.filter(Boolean).length;
   const allDone = doneCount === evidence.length;
   const items = lang === "zh-tw" && evidenceZh ? evidenceZh : evidence;
-  const prompt = fillPrompt(lang === "zh-tw" && assessmentPromptZh ? assessmentPromptZh : assessmentPrompt, name);
+  const prompt = fillPrompt(
+    lang === "zh-tw" && assessmentPromptZh ? assessmentPromptZh : assessmentPrompt,
+    activeProfile?.name ?? ""
+  );
+
+  if (ready && !activeProfile) {
+    return (
+      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5 text-amber-800 text-sm">
+        {t("noProfileYet")}
+      </div>
+    );
+  }
 
   return (
     <div className="relative rounded-2xl bg-white shadow-sm border border-slate-200 p-5 overflow-hidden">
