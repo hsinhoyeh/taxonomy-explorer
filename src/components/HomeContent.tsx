@@ -23,6 +23,14 @@ export default function HomeContent({ subjects }: { subjects: SubjectEntry[] }) 
       >
         <h1 className="text-4xl font-extrabold text-slate-800">{t("heroTitle")} 🌟</h1>
         <p className="text-slate-500 mt-2">{t("heroSubtitle")}</p>
+        <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} className="inline-block mt-5">
+          <Link
+            href="/snap"
+            className="rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold px-6 py-3 shadow-md inline-block"
+          >
+            {t("snapHomeCta")}
+          </Link>
+        </motion.div>
       </motion.div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
