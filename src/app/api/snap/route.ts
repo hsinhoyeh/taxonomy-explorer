@@ -131,20 +131,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ candidates: [], conceptSummary: "" });
     }
 
-    // Filter candidates by subject and age band before the re-rank.
+    // Filter candidates by subject and age band before the re-rank. When the
+    // page's subject has no counterpart in the taxonomy (e.g. 社會), rank
+    // across all subjects rather than an arbitrary slice — capping keeps the
+    // most age-relevant topics, not the first ones in file order.
     const allTopics = getAllTopics();
     const age = body.profileAge;
     const minAge = Math.min(extracted.gradeHint.minAge, age ?? Infinity) - 1;
     const maxAge = Math.max(extracted.gradeHint.maxAge, age ?? -Infinity) + 1;
+    const subjectValid = subjects.includes(extracted.subject);
     let pool = allTopics.filter(
       (t) =>
-        (extracted.subject === "Other" || t.subject === extracted.subject) &&
+        (!subjectValid || t.subject === extracted.subject) &&
         t.ageRangeStart <= maxAge &&
         t.ageRangeEnd >= minAge
     );
-    if (pool.length === 0) pool = allTopics.filter((t) => t.subject === extracted.subject);
-    if (pool.length === 0) pool = allTopics;
-    pool = pool.slice(0, 120);
+    if (pool.length === 0) {
+      pool = subjectValid ? allTopics.filter((t) => t.subject === extracted.subject) : allTopics;
+    }
+    const midAge = (extracted.gradeHint.minAge + extracted.gradeHint.maxAge) / 2;
+    pool = [...pool]
+      .sort(
+        (a, b) =>
+          Math.abs((a.ageRangeStart + a.ageRangeEnd) / 2 - midAge) -
+          Math.abs((b.ageRangeStart + b.ageRangeEnd) / 2 - midAge)
+      )
+      .slice(0, 400);
+
+    console.log(
+      `snap: provider=${provider.name} subject=${JSON.stringify(extracted.subject)} valid=${subjectValid} ` +
+        `concepts=${JSON.stringify(extracted.concepts)} grade=${extracted.gradeHint.minAge}-${extracted.gradeHint.maxAge} pool=${pool.length}`
+    );
 
     // Stage 2: re-rank the pool against the extracted concepts.
     const poolLines = pool
@@ -152,6 +169,7 @@ export async function POST(req: NextRequest) {
       .join("\n");
 
     const ranked = await provider.rank(extracted.concepts, poolLines);
+    console.log(`snap: ranked=${JSON.stringify(ranked)}`);
     const byId = new Map(pool.map((t) => [t.id, t]));
     const candidates = ranked
       .filter((c) => c.confidence >= CONFIDENCE_FLOOR && byId.has(c.topicId))

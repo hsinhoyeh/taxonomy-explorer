@@ -27,6 +27,7 @@ function extractPrompt(subjects: string[]): string {
   return `This is a photo of a school textbook or workbook page (likely Traditional Chinese, possibly with Zhuyin annotations — Zhuyin means early elementary). Identify what it teaches.
 
 Pick the subject from exactly this list (or "Other" if none fit): ${subjects.join(", ")}.
+Note there is no "Social Studies" subject — for pages about society, civics, money, economics, or daily life (社會/生活), pick the closest of Life Skills, History, or Personal & Social Development.
 
 Describe the specific concept(s) being taught, not the page layout. Estimate the age range of the target student. Set readable=false if the image is not a readable learning page.`;
 }
