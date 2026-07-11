@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { schedulePush, SYNC_APPLIED_EVENT } from "@/lib/sync";
 
 export interface Profile {
   id: string;
@@ -8,6 +9,10 @@ export interface Profile {
   age: number;
   color: string;
   createdAt: number;
+  updatedAt?: number;
+  /** Tombstone — kept (not removed) so a deletion survives the sync merge
+   * instead of being resurrected by an older copy from another device. */
+  deleted?: boolean;
 }
 
 const PROFILES_KEY = "taxonomy-explorer:profiles";
@@ -49,19 +54,32 @@ interface ProfilesContextValue {
 
 const ProfilesContext = createContext<ProfilesContextValue | null>(null);
 
+function loadStored(): Profile[] {
+  try {
+    const raw = window.localStorage.getItem(PROFILES_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {
+    // ignore malformed cache
+  }
+  return [];
+}
+
 export function ProfilesProvider({ children }: { children: React.ReactNode }) {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
+  const reload = useCallback(() => {
+    const loaded = loadStored();
+    setAllProfiles(loaded);
+    const live = loaded.filter((p) => !p.deleted);
+    setActiveId((current) =>
+      current && live.some((p) => p.id === current) ? current : live[0]?.id ?? null
+    );
+  }, []);
+
   useEffect(() => {
-    let loaded: Profile[] = [];
-    try {
-      const raw = window.localStorage.getItem(PROFILES_KEY);
-      if (raw) loaded = JSON.parse(raw);
-    } catch {
-      // ignore malformed cache
-    }
+    let loaded = loadStored();
 
     // Migrate the old single free-text child name into a first profile.
     if (loaded.length === 0) {
@@ -74,6 +92,7 @@ export function ProfilesProvider({ children }: { children: React.ReactNode }) {
             age: 7,
             color: PROFILE_COLORS[0],
             createdAt: Date.now(),
+            updatedAt: Date.now(),
           },
         ];
         window.localStorage.setItem(PROFILES_KEY, JSON.stringify(loaded));
@@ -81,16 +100,25 @@ export function ProfilesProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    setProfiles(loaded);
+    setAllProfiles(loaded);
+    const live = loaded.filter((p) => !p.deleted);
     const storedActive = window.localStorage.getItem(ACTIVE_KEY);
-    setActiveId(storedActive && loaded.some((p) => p.id === storedActive) ? storedActive : loaded[0]?.id ?? null);
+    setActiveId(
+      storedActive && live.some((p) => p.id === storedActive) ? storedActive : live[0]?.id ?? null
+    );
     setReady(true);
-  }, []);
+
+    window.addEventListener(SYNC_APPLIED_EVENT, reload);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, reload);
+  }, [reload]);
 
   const persist = (next: Profile[]) => {
-    setProfiles(next);
+    setAllProfiles(next);
     window.localStorage.setItem(PROFILES_KEY, JSON.stringify(next));
+    schedulePush();
   };
+
+  const profiles = useMemo(() => allProfiles.filter((p) => !p.deleted), [allProfiles]);
 
   const addProfile = (name: string, age: number): Profile => {
     const profile: Profile = {
@@ -99,9 +127,9 @@ export function ProfilesProvider({ children }: { children: React.ReactNode }) {
       age,
       color: nextColor(profiles),
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
-    const next = [...profiles, profile];
-    persist(next);
+    persist([...allProfiles, profile]);
     setActiveId(profile.id);
     window.localStorage.setItem(ACTIVE_KEY, profile.id);
     return profile;
@@ -113,10 +141,12 @@ export function ProfilesProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteProfile = (id: string) => {
-    const next = profiles.filter((p) => p.id !== id);
+    const next = allProfiles.map((p) =>
+      p.id === id ? { ...p, deleted: true, updatedAt: Date.now() } : p
+    );
     persist(next);
     if (activeId === id) {
-      const fallback = next[0]?.id ?? null;
+      const fallback = next.find((p) => !p.deleted)?.id ?? null;
       setActiveId(fallback);
       if (fallback) window.localStorage.setItem(ACTIVE_KEY, fallback);
       else window.localStorage.removeItem(ACTIVE_KEY);

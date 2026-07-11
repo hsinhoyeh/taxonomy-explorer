@@ -48,6 +48,13 @@ const STRINGS = {
     snapRateLimited: "You've reached today's photo limit. Try again tomorrow.",
     snapConceptLabel: "This page seems to teach",
     snapHomeCta: "📸 Snap a textbook page",
+    signIn: "Sign in",
+    signOut: "Sign out",
+    snapLoginRequired: "Please sign in to use the photo feature.",
+    speakAloud: "Read aloud",
+    micStart: "Let your child answer",
+    micListening: "Listening… tap to stop",
+    sttHeard: "Heard",
   },
   "zh-tw": {
     appTitle: "學習地圖探索家",
@@ -89,6 +96,13 @@ const STRINGS = {
     snapRateLimited: "今天的照片次數已用完，明天再試試吧。",
     snapConceptLabel: "這一頁似乎在教",
     snapHomeCta: "📸 拍一頁課本",
+    signIn: "登入",
+    signOut: "登出",
+    snapLoginRequired: "請先登入才能使用拍照功能。",
+    speakAloud: "朗讀",
+    micStart: "讓孩子說說看",
+    micListening: "聆聽中… 點一下停止",
+    sttHeard: "聽到",
   },
 } as const;
 

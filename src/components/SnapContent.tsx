@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
+import { signIn } from "next-auth/react";
 import { useLang } from "@/lib/i18n";
 import { useProfiles } from "@/lib/profiles";
 import { Bilingual } from "@/components/Bilingual";
@@ -53,11 +54,13 @@ export default function SnapContent() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SnapResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   const reset = () => {
     setPreview(null);
     setResult(null);
     setError(null);
+    setNeedsLogin(false);
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -74,6 +77,10 @@ export default function SnapContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image, profileAge: activeProfile?.age }),
       });
+      if (res.status === 401) {
+        setNeedsLogin(true);
+        return;
+      }
       if (res.status === 429) {
         setError(t("snapRateLimited"));
         return;
@@ -137,6 +144,19 @@ export default function SnapContent() {
             🔍
           </motion.div>
           <p className="text-slate-500 mt-2">{t("snapAnalyzing")}</p>
+        </div>
+      )}
+
+      {needsLogin && (
+        <div className="text-center py-4">
+          <p className="text-slate-600 mb-3">{t("snapLoginRequired")}</p>
+          <button
+            type="button"
+            onClick={() => signIn("google")}
+            className="rounded-xl bg-indigo-500 text-white font-semibold px-5 py-2 hover:bg-indigo-600"
+          >
+            {t("signIn")}
+          </button>
         </div>
       )}
 

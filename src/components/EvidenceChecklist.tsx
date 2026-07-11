@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useProfiles, evidenceStorageKey, fillPrompt } from "@/lib/profiles";
+import { schedulePush, SYNC_APPLIED_EVENT } from "@/lib/sync";
 import { useLang } from "@/lib/i18n";
 import { ZhuyinText } from "@/components/Bilingual";
+import { SpeakButton, AnswerMic } from "@/components/Speech";
 
 export default function EvidenceChecklist({
   topicId,
@@ -24,7 +26,7 @@ export default function EvidenceChecklist({
   const storageKey = activeProfile ? evidenceStorageKey(activeProfile.id, topicId) : null;
   const [checked, setChecked] = useState<boolean[]>(() => evidence.map(() => false));
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!storageKey) {
       setChecked(evidence.map(() => false));
       return;
@@ -45,11 +47,18 @@ export default function EvidenceChecklist({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
+  useEffect(() => {
+    load();
+    window.addEventListener(SYNC_APPLIED_EVENT, load);
+    return () => window.removeEventListener(SYNC_APPLIED_EVENT, load);
+  }, [load]);
+
   const toggle = (i: number) => {
     if (!storageKey) return;
     setChecked((prev) => {
       const next = prev.map((v, idx) => (idx === i ? !v : v));
       window.localStorage.setItem(storageKey, JSON.stringify(next));
+      schedulePush();
       return next;
     });
   };
@@ -77,14 +86,14 @@ export default function EvidenceChecklist({
       </p>
       <ul className="space-y-2">
         {items.map((item, i) => (
-          <li key={i}>
+          <li key={i} className="flex items-start gap-1">
             <motion.button
               type="button"
               onClick={() => toggle(i)}
               whileTap={{ scale: 0.97 }}
               animate={checked[i] ? { scale: [1, 1.03, 1] } : { scale: 1 }}
               transition={{ duration: 0.25 }}
-              className={`w-full text-left rounded-xl border px-4 py-3 transition-colors ${
+              className={`flex-1 text-left rounded-xl border px-4 py-3 transition-colors ${
                 checked[i]
                   ? "bg-emerald-50 border-emerald-300 text-emerald-800"
                   : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
@@ -93,6 +102,7 @@ export default function EvidenceChecklist({
               <span className="mr-2">{checked[i] ? "✅" : "⬜"}</span>
               {lang === "zh-tw" && evidenceZh ? <ZhuyinText text={item} /> : item}
             </motion.button>
+            <SpeakButton text={item} className="mt-3" />
           </li>
         ))}
       </ul>
@@ -100,8 +110,10 @@ export default function EvidenceChecklist({
         {t("tryAsking")}
       </p>
       <p className="text-slate-600 italic">
-        &ldquo;{lang === "zh-tw" && assessmentPromptZh ? <ZhuyinText text={prompt} /> : prompt}&rdquo;
+        &ldquo;{lang === "zh-tw" && assessmentPromptZh ? <ZhuyinText text={prompt} /> : prompt}&rdquo;{" "}
+        <SpeakButton text={prompt} />
       </p>
+      <AnswerMic />
       <AnimatePresence>
         {allDone && (
           <motion.div
