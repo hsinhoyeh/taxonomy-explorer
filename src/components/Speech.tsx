@@ -168,29 +168,37 @@ function getRecognition(): RecognitionLike | null {
 }
 
 /** Mic button: the child answers aloud, the transcript appears below —
- * a hands-free way for a parent to capture the answer mid-conversation. */
+ * a hands-free way for a parent to capture the answer mid-conversation.
+ *
+ * There is no configurable duration in the Web Speech API — the browser
+ * ends a recognition session on its own after a short silence (and mobile
+ * engines cap session length). To survive long, paused answers we
+ * auto-restart on every non-manual end and accumulate finalized text
+ * across sessions; only pressing stop actually stops. */
 export function AnswerMic() {
   const { lang, t } = useLang();
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<RecognitionLike | null>(null);
+  const doneTextRef = useRef(""); // finalized text from completed sessions
+  const sessionTextRef = useRef(""); // latest text within the current session
+  const manualStopRef = useRef(false);
 
   useEffect(() => {
     setSupported(
       typeof window !== "undefined" &&
         ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
     );
-    return () => recognitionRef.current?.stop();
+    return () => {
+      manualStopRef.current = true;
+      recognitionRef.current?.stop();
+    };
   }, []);
 
   if (!supported) return null;
 
-  const toggle = () => {
-    if (listening) {
-      recognitionRef.current?.stop();
-      return;
-    }
+  const startSession = () => {
     const recognition = getRecognition();
     if (!recognition) return;
     recognitionRef.current = recognition;
@@ -202,13 +210,43 @@ export function AnswerMic() {
       for (let i = 0; i < event.results.length; i++) {
         text += event.results[i][0]?.transcript ?? "";
       }
-      setTranscript(text);
+      sessionTextRef.current = text;
+      setTranscript(doneTextRef.current + text);
     };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onerror = () => {
+      // Chrome fires onerror (e.g. no-speech) followed by onend; the
+      // restart decision lives in onend.
+    };
+    recognition.onend = () => {
+      doneTextRef.current += sessionTextRef.current;
+      sessionTextRef.current = "";
+      if (manualStopRef.current) {
+        setListening(false);
+        return;
+      }
+      // Auto-ended (silence / engine limit) while the mic is still on —
+      // resume so long answers keep being captured.
+      try {
+        startSession();
+      } catch {
+        setListening(false);
+      }
+    };
+    recognition.start();
+  };
+
+  const toggle = () => {
+    if (listening) {
+      manualStopRef.current = true;
+      recognitionRef.current?.stop();
+      return;
+    }
+    manualStopRef.current = false;
+    doneTextRef.current = "";
+    sessionTextRef.current = "";
     setTranscript("");
     setListening(true);
-    recognition.start();
+    startSession();
   };
 
   return (
