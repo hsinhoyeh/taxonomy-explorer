@@ -11,22 +11,48 @@ function speechLang(lang: string): string {
   return lang === "zh-tw" ? "zh-TW" : "en-US";
 }
 
-/** Voice preference lists ported from math-adventure (tuned for kids):
- * natural named voices first, then exact/loose language match. Without
- * this, many browsers pick a robotic default for zh-TW. */
-const VOICE_PREFS: Record<string, string[]> = {
-  "zh-TW": ["Meijia", "Tingting", "zh-TW", "zh_TW", "Chinese (Traditional)"],
-  "en-US": ["Samantha", "Karen", "Moira", "Daniel", "en-US", "en_US", "English"],
-};
+/** Preferred natural voices per language. Names include the localized
+ * forms (a Chinese-UI device exposes Apple's "Meijia" as 美佳, Edge's
+ * HsiaoChen as 曉臻, etc.) — English-only name matching silently falls
+ * through to a zh-CN voice, which is what made zh-TW sound wrong. */
+const ZH_TW_NAMES = [
+  "Meijia", "美佳", // Apple
+  "HsiaoChen", "曉臻", "HsiaoYu", "曉雨", "Yating", "雅婷", "Hanhan", "瀚瀚", // Microsoft
+  "Google 國語", // Chrome
+];
+const EN_NAMES = ["Samantha", "Karen", "Moira", "Daniel", "Google US English"];
+
+function normalizeLang(l: string): string {
+  return l.toLowerCase().replace("_", "-");
+}
 
 function pickVoice(langTag: string): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
-  for (const pref of VOICE_PREFS[langTag] ?? []) {
-    const voice = voices.find((v) => v.name.includes(pref) || v.lang === pref);
-    if (voice) return voice;
+
+  if (langTag === "zh-TW") {
+    for (const name of ZH_TW_NAMES) {
+      const v = voices.find((voice) => voice.name.includes(name));
+      if (v) return v;
+    }
+    // Any Taiwan/Traditional voice before ever falling back to zh-CN.
+    return (
+      voices.find((v) => normalizeLang(v.lang) === "zh-tw") ??
+      voices.find((v) => normalizeLang(v.lang).startsWith("zh-hant")) ??
+      voices.find((v) => normalizeLang(v.lang).startsWith("zh")) ??
+      null
+    );
   }
-  return voices.find((v) => v.lang.startsWith(langTag.split("-")[0])) ?? null;
+
+  for (const name of EN_NAMES) {
+    const v = voices.find((voice) => voice.name.includes(name));
+    if (v) return v;
+  }
+  return (
+    voices.find((v) => normalizeLang(v.lang) === "en-us") ??
+    voices.find((v) => normalizeLang(v.lang).startsWith("en")) ??
+    null
+  );
 }
 
 export function SpeakButton({
@@ -51,13 +77,7 @@ export function SpeakButton({
 
   if (!supported) return null;
 
-  const toggle = () => {
-    if (speaking) {
-      window.speechSynthesis.cancel();
-      setSpeaking(false);
-      return;
-    }
-    window.speechSynthesis.cancel();
+  const speakNow = () => {
     const utterance = new SpeechSynthesisUtterance(text);
     const langTag = speechLang(lang);
     utterance.lang = langTag;
@@ -67,8 +87,33 @@ export function SpeakButton({
     if (voice) utterance.voice = voice;
     utterance.onend = () => setSpeaking(false);
     utterance.onerror = () => setSpeaking(false);
-    setSpeaking(true);
     window.speechSynthesis.speak(utterance);
+  };
+
+  const toggle = () => {
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    setSpeaking(true);
+    // Some browsers populate voices asynchronously; speaking before the
+    // list arrives falls back to the default voice (often the wrong
+    // language entirely). Wait briefly for voiceschanged if needed.
+    if (window.speechSynthesis.getVoices().length > 0) {
+      speakNow();
+      return;
+    }
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      window.speechSynthesis.removeEventListener("voiceschanged", go);
+      speakNow();
+    };
+    window.speechSynthesis.addEventListener("voiceschanged", go);
+    setTimeout(go, 400);
   };
 
   if (label) {
