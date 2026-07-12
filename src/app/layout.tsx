@@ -8,7 +8,6 @@ import NavLinks from "@/components/NavLinks";
 import AuthArea from "@/components/AuthArea";
 import { LangProvider } from "@/lib/i18n";
 import { ProfilesProvider } from "@/lib/profiles";
-import { authEnabled } from "@/auth";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,7 +48,7 @@ export default function RootLayout({
               <div className="flex items-center gap-3">
                 <ProfileSwitcher />
                 <LangToggle />
-                <AuthArea enabled={authEnabled} />
+                <AuthArea />
               </div>
             </header>
             <PageTransition>{children}</PageTransition>

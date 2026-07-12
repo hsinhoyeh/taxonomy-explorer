@@ -83,9 +83,19 @@ function AuthControls() {
   );
 }
 
-/** Rendered only when Google OAuth credentials are configured (the server
- * layout passes `enabled`); until then the app stays anonymous-only. */
-export default function AuthArea({ enabled }: { enabled: boolean }) {
+/** Auth availability must be detected at runtime (via the providers
+ * endpoint), not baked in at build time — static pages are prerendered
+ * inside the Docker build where the OAuth env vars don't exist. */
+export default function AuthArea() {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/providers")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((providers) => setEnabled(Boolean(providers?.google)))
+      .catch(() => setEnabled(false));
+  }, []);
+
   if (!enabled) return null;
   return (
     <SessionProvider>
