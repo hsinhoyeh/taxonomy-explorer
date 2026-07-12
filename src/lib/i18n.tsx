@@ -116,16 +116,21 @@ const STRINGS = {
 
 export type StringKey = keyof typeof STRINGS.en;
 
+const ZHUYIN_KEY = "taxonomy-explorer:zhuyin";
+
 interface LangContextValue {
   lang: Lang;
   setLang: (lang: Lang) => void;
   t: (key: StringKey) => string;
+  zhuyinEnabled: boolean;
+  toggleZhuyin: () => void;
 }
 
 const LangContext = createContext<LangContextValue | null>(null);
 
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
+  const [zhuyinEnabled, setZhuyinEnabled] = useState(true);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY) as Lang | null;
@@ -134,6 +139,7 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
     } else if ((navigator.language || "").toLowerCase().startsWith("zh")) {
       setLangState("zh-tw");
     }
+    setZhuyinEnabled(window.localStorage.getItem(ZHUYIN_KEY) !== "off");
   }, []);
 
   const setLang = (next: Lang) => {
@@ -141,13 +147,22 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, next);
   };
 
+  const toggleZhuyin = () => {
+    setZhuyinEnabled((prev) => {
+      window.localStorage.setItem(ZHUYIN_KEY, prev ? "off" : "on");
+      return !prev;
+    });
+  };
+
   const value = useMemo<LangContextValue>(
     () => ({
       lang,
       setLang,
       t: (key: StringKey) => STRINGS[lang][key] ?? STRINGS.en[key] ?? key,
+      zhuyinEnabled,
+      toggleZhuyin,
     }),
-    [lang]
+    [lang, zhuyinEnabled]
   );
 
   return <LangContext.Provider value={value}>{children}</LangContext.Provider>;

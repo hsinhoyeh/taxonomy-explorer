@@ -25,16 +25,45 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Zhuyin (注音) ruby annotation */
-.zy-ruby {
-  ruby-position: over;
-  margin: 0 1px;
+/* Zhuyin (注音) beside each character — vertical column to the right with
+   the tone mark alongside, as in Taiwanese textbooks (from code-quest-kids) */
+.zy {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  vertical-align: middle;
 }
-.zy-rt {
-  font-size: 0.45em;
-  color: #6b7280;
-  letter-spacing: -0.05em;
+.zy-c {
+  display: inline-block;
+}
+.zy-z {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 1px;
+}
+.zy-z.zy-neu {
+  flex-direction: column;
+  align-items: center;
+}
+.zy-b {
+  writing-mode: vertical-lr;
+  text-orientation: upright;
+  font-size: 0.4em;
+  font-weight: 700;
+  color: #d84315;
+  line-height: 0.92;
+  letter-spacing: -0.5px;
   user-select: none;
+}
+.zy-t {
+  font-size: 0.34em;
+  font-weight: 700;
+  color: #d84315;
+  line-height: 1;
+  user-select: none;
+}
+.zy-neu .zy-t {
+  margin-bottom: -1px;
 }
 
 @keyframes float-in {

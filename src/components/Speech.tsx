@@ -11,13 +11,22 @@ function speechLang(lang: string): string {
   return lang === "zh-tw" ? "zh-TW" : "en-US";
 }
 
+/** Voice preference lists ported from math-adventure (tuned for kids):
+ * natural named voices first, then exact/loose language match. Without
+ * this, many browsers pick a robotic default for zh-TW. */
+const VOICE_PREFS: Record<string, string[]> = {
+  "zh-TW": ["Meijia", "Tingting", "zh-TW", "zh_TW", "Chinese (Traditional)"],
+  "en-US": ["Samantha", "Karen", "Moira", "Daniel", "en-US", "en_US", "English"],
+};
+
 function pickVoice(langTag: string): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
-  return (
-    voices.find((v) => v.lang === langTag) ??
-    voices.find((v) => v.lang.startsWith(langTag.split("-")[0])) ??
-    null
-  );
+  if (!voices.length) return null;
+  for (const pref of VOICE_PREFS[langTag] ?? []) {
+    const voice = voices.find((v) => v.name.includes(pref) || v.lang === pref);
+    if (voice) return voice;
+  }
+  return voices.find((v) => v.lang.startsWith(langTag.split("-")[0])) ?? null;
 }
 
 export function SpeakButton({
@@ -52,6 +61,8 @@ export function SpeakButton({
     const utterance = new SpeechSynthesisUtterance(text);
     const langTag = speechLang(lang);
     utterance.lang = langTag;
+    utterance.rate = 0.9; // slightly slower for kids, per math-adventure tuning
+    utterance.pitch = 1.0;
     const voice = pickVoice(langTag);
     if (voice) utterance.voice = voice;
     utterance.onend = () => setSpeaking(false);
