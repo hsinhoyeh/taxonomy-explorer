@@ -24,9 +24,11 @@ export interface UserState {
   profiles: StoredProfile[];
   /** key: `${profileId}:${topicId}` -> checked booleans */
   evidence: Record<string, boolean[]>;
+  /** key: `${profileId}:${topicId}` -> first-mastered epoch ms */
+  mastered?: Record<string, number>;
 }
 
-const EMPTY_STATE: UserState = { profiles: [], evidence: {} };
+const EMPTY_STATE: UserState = { profiles: [], evidence: {}, mastered: {} };
 
 export function mergeStates(a: UserState, b: UserState): UserState {
   const profiles = new Map<string, StoredProfile>();
@@ -44,7 +46,12 @@ export function mergeStates(a: UserState, b: UserState): UserState {
     const len = Math.max(av.length, bv.length);
     evidence[key] = Array.from({ length: len }, (_, i) => Boolean(av[i]) || Boolean(bv[i]));
   }
-  return { profiles: [...profiles.values()], evidence };
+  // Mastery history: earliest timestamp wins.
+  const mastered: Record<string, number> = {};
+  for (const [key, ts] of [...Object.entries(a.mastered ?? {}), ...Object.entries(b.mastered ?? {})]) {
+    mastered[key] = mastered[key] ? Math.min(mastered[key], ts) : ts;
+  }
+  return { profiles: [...profiles.values()], evidence, mastered };
 }
 
 interface StoreBackend {

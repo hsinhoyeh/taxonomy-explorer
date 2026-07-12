@@ -58,6 +58,8 @@ export function getTopicSummaries(): TopicSummary[] {
     subject: t.subject,
     ageRangeStart: t.ageRangeStart,
     evidenceCount: t.evidence.length,
+    name: t.name,
+    nameZh: topicsZh[t.id]?.name,
   }));
 }
 

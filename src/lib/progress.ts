@@ -7,6 +7,8 @@ export interface TopicSummary {
   subject: string;
   ageRangeStart: number;
   evidenceCount: number;
+  name: string;
+  nameZh?: string;
 }
 
 export interface SubjectProgress {

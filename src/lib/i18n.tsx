@@ -52,9 +52,13 @@ const STRINGS = {
     signOut: "Sign out",
     snapLoginRequired: "Please sign in to use the photo feature.",
     speakAloud: "Read aloud",
+    speakQuestion: "Read the question",
     micStart: "Let your child answer",
     micListening: "Listening… tap to stop",
     sttHeard: "Heard",
+    trajectoryTitle: "Learning journey",
+    trajectoryEmpty: "Complete a topic's checklist to start the journey!",
+    trajectoryBaseline: "Includes {n} topics mastered before tracking began.",
   },
   "zh-tw": {
     appTitle: "學習地圖探索家",
@@ -100,9 +104,13 @@ const STRINGS = {
     signOut: "登出",
     snapLoginRequired: "請先登入才能使用拍照功能。",
     speakAloud: "朗讀",
+    speakQuestion: "唸出問題",
     micStart: "讓孩子說說看",
     micListening: "聆聽中… 點一下停止",
     sttHeard: "聽到",
+    trajectoryTitle: "學習軌跡",
+    trajectoryEmpty: "完成一個主題的檢核清單，就會開始記錄學習軌跡！",
+    trajectoryBaseline: "包含開始記錄之前已完成的 {n} 個主題。",
   },
 } as const;
 

@@ -32,6 +32,7 @@ export async function POST(req: NextRequest) {
     incoming = {
       profiles: parsed.profiles.slice(0, 50),
       evidence: parsed.evidence,
+      mastered: parsed.mastered && typeof parsed.mastered === "object" ? parsed.mastered : {},
     };
   } catch {
     return NextResponse.json({ error: "bad_request" }, { status: 400 });

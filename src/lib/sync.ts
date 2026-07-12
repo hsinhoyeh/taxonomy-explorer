@@ -24,6 +24,7 @@ interface LocalProfile {
 interface LocalState {
   profiles: LocalProfile[];
   evidence: Record<string, boolean[]>;
+  mastered: Record<string, number>;
 }
 
 let syncEnabled = false;
@@ -41,20 +42,34 @@ export function collectLocalState(): LocalState {
     // ignore malformed cache
   }
   const evidence: Record<string, boolean[]> = {};
+  const mastered: Record<string, number> = {};
   for (let i = 0; i < window.localStorage.length; i++) {
     const key = window.localStorage.key(i);
     if (!key?.startsWith(EVIDENCE_PREFIX)) continue;
-    const rest = key.slice(EVIDENCE_PREFIX.length); // `${profileId}:evidence:${topicId}`
-    const parts = rest.split(":evidence:");
-    if (parts.length !== 2) continue;
-    try {
-      const value = JSON.parse(window.localStorage.getItem(key) ?? "[]");
-      if (Array.isArray(value)) evidence[`${parts[0]}:${parts[1]}`] = value;
-    } catch {
-      // ignore malformed entry
+    const rest = key.slice(EVIDENCE_PREFIX.length);
+    const evParts = rest.split(":evidence:"); // `${profileId}:evidence:${topicId}`
+    if (evParts.length === 2) {
+      try {
+        const value = JSON.parse(window.localStorage.getItem(key) ?? "[]");
+        if (Array.isArray(value)) evidence[`${evParts[0]}:${evParts[1]}`] = value;
+      } catch {
+        // ignore malformed entry
+      }
+      continue;
+    }
+    if (rest.endsWith(":mastered")) {
+      const profileId = rest.slice(0, -":mastered".length);
+      try {
+        const map = JSON.parse(window.localStorage.getItem(key) ?? "{}");
+        for (const [topicId, ts] of Object.entries(map)) {
+          if (typeof ts === "number") mastered[`${profileId}:${topicId}`] = ts;
+        }
+      } catch {
+        // ignore malformed entry
+      }
     }
   }
-  return { profiles, evidence };
+  return { profiles, evidence, mastered };
 }
 
 function applyState(state: LocalState) {
@@ -67,6 +82,16 @@ function applyState(state: LocalState) {
       `${EVIDENCE_PREFIX}${profileId}:evidence:${topicId}`,
       JSON.stringify(value)
     );
+  }
+  const masteredByProfile: Record<string, Record<string, number>> = {};
+  for (const [key, ts] of Object.entries(state.mastered ?? {})) {
+    const sep = key.indexOf(":");
+    const profileId = key.slice(0, sep);
+    const topicId = key.slice(sep + 1);
+    (masteredByProfile[profileId] ??= {})[topicId] = ts;
+  }
+  for (const [profileId, map] of Object.entries(masteredByProfile)) {
+    window.localStorage.setItem(`${EVIDENCE_PREFIX}${profileId}:mastered`, JSON.stringify(map));
   }
   window.dispatchEvent(new Event(SYNC_APPLIED_EVENT));
 }

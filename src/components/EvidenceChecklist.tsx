@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useProfiles, evidenceStorageKey, fillPrompt } from "@/lib/profiles";
+import { recordMastery } from "@/lib/mastery";
 import { schedulePush, SYNC_APPLIED_EVENT } from "@/lib/sync";
 import { useLang } from "@/lib/i18n";
 import { ZhuyinText } from "@/components/Bilingual";
@@ -54,10 +55,13 @@ export default function EvidenceChecklist({
   }, [load]);
 
   const toggle = (i: number) => {
-    if (!storageKey) return;
+    if (!storageKey || !activeProfile) return;
     setChecked((prev) => {
       const next = prev.map((v, idx) => (idx === i ? !v : v));
       window.localStorage.setItem(storageKey, JSON.stringify(next));
+      if (next.length > 0 && next.every(Boolean)) {
+        recordMastery(activeProfile.id, topicId);
+      }
       schedulePush();
       return next;
     });
@@ -110,10 +114,12 @@ export default function EvidenceChecklist({
         {t("tryAsking")}
       </p>
       <p className="text-slate-600 italic">
-        &ldquo;{lang === "zh-tw" && assessmentPromptZh ? <ZhuyinText text={prompt} /> : prompt}&rdquo;{" "}
-        <SpeakButton text={prompt} />
+        &ldquo;{lang === "zh-tw" && assessmentPromptZh ? <ZhuyinText text={prompt} /> : prompt}&rdquo;
       </p>
-      <AnswerMic />
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <SpeakButton text={prompt} label={t("speakQuestion")} />
+        <AnswerMic />
+      </div>
       <AnimatePresence>
         {allDone && (
           <motion.div

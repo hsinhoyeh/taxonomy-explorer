@@ -11,13 +11,33 @@ function speechLang(lang: string): string {
   return lang === "zh-tw" ? "zh-TW" : "en-US";
 }
 
-export function SpeakButton({ text, className }: { text: string; className?: string }) {
+function pickVoice(langTag: string): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  return (
+    voices.find((v) => v.lang === langTag) ??
+    voices.find((v) => v.lang.startsWith(langTag.split("-")[0])) ??
+    null
+  );
+}
+
+export function SpeakButton({
+  text,
+  className,
+  label,
+}: {
+  text: string;
+  className?: string;
+  /** When set, renders as a prominent labeled button instead of a small icon. */
+  label?: string;
+}) {
   const { lang, t } = useLang();
   const [supported, setSupported] = useState(false);
   const [speaking, setSpeaking] = useState(false);
 
   useEffect(() => {
     setSupported(typeof window !== "undefined" && "speechSynthesis" in window);
+    // Some browsers populate the voice list asynchronously.
+    if ("speechSynthesis" in window) window.speechSynthesis.getVoices();
   }, []);
 
   if (!supported) return null;
@@ -30,12 +50,31 @@ export function SpeakButton({ text, className }: { text: string; className?: str
     }
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = speechLang(lang);
+    const langTag = speechLang(lang);
+    utterance.lang = langTag;
+    const voice = pickVoice(langTag);
+    if (voice) utterance.voice = voice;
     utterance.onend = () => setSpeaking(false);
     utterance.onerror = () => setSpeaking(false);
     setSpeaking(true);
     window.speechSynthesis.speak(utterance);
   };
+
+  if (label) {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        className={`rounded-full px-4 py-1.5 text-sm font-semibold border transition ${
+          speaking
+            ? "bg-indigo-50 border-indigo-300 text-indigo-700 animate-pulse"
+            : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+        } ${className ?? ""}`}
+      >
+        {speaking ? "🔊" : "🔈"} {label}
+      </button>
+    );
+  }
 
   return (
     <button
@@ -117,7 +156,7 @@ export function AnswerMic() {
   };
 
   return (
-    <div className="mt-3">
+    <div>
       <button
         type="button"
         onClick={toggle}
